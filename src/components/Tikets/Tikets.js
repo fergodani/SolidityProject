@@ -43,7 +43,7 @@ function Tikets() {
         const signer = provider.getSigner();
 
         myContract.current = new Contract(
-          '0x938dBD937334359ca5140EaBa5443666b679E761',
+          '0xECeD84D0566f2cc168fBb98EA3Ae3f8b060f7FFD',
           myContractManifest.abi,
           signer
         );
@@ -54,22 +54,29 @@ function Tikets() {
   }
 
   let clickBuyTiket = async (i) => {
-    const tx = await myContract.current.buyTiket(i, {
-      value: ethers.utils.parseEther("0.02"),
-      gasLimit: 6721975,
-      gasPrice: 20000000000,
-    });
+    try {
+      const tx = await myContract.current.buyTiket(i, {
+        value: ethers.utils.parseEther("0.02"),
+        gasLimit: 6721975,
+        gasPrice: 20000000000,
+      });
 
-    await tx.wait()
-
+      await tx.wait()
+    } catch (error) {
+      alert("Ha ocurrido un error")
+    }
     const tiketsUpdated = await myContract.current.getTikets();
     setTikets(tiketsUpdated);
     seeBalance()
   }
 
   let withdrawBalance = async () => {
-    const tx = await myContract.current.transferBalanceToAdmin();
-    await tx.wait()
+    try {
+      const tx = await myContract.current.transferBalanceToAdmin();
+      await tx.wait()
+    } catch (error) {
+      alert(error.data.message)
+    }
     seeBalance()
   }
 
@@ -124,15 +131,20 @@ function Tikets() {
   }
 
   let bookTiket = async (i) => {
-    console.log(i)
+    try {
     const tx = await myContract.current.bookTiket(i);
-    console.log(tx)
+    } catch (error) {
+      alert(error.data ? error.data.message : "Ha ocurrido un error")
+    }
   }
 
   let transferTiket = async (e) => {
     const tx = await myContract.current.transferTiket(ticketId, recipient);
 
     await tx.wait();
+
+    const tiketsUpdated = await myContract.current.getTikets();
+    setTikets(tiketsUpdated);
   }
 
   return (
@@ -142,7 +154,7 @@ function Tikets() {
       <p>Balance Wei: {ethers.utils.formatEther(balanceWei)}</p>
       <form className="form-inline" onSubmit={(e) => submitMyForm(e)}>
         <input type="text" />
-        <button type="submit" > Donate </button>
+        <button type="submit" > Change admin </button>
       </form>
       <p>User wallet balance: {userBalance} BNB</p>
       <form onSubmit={(e) => transferTiket(e)}>

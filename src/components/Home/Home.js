@@ -10,6 +10,7 @@ function Home() {
       <h1>Main Page</h1>
       <Link to="/tikets" className="link">Tikets</Link>
       <Link to="/bank" className="link">Bank</Link>
+      <Link to="/state" className="link">Real State</Link>
     </div>
   )
 }
