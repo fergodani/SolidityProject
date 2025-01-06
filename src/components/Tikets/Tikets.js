@@ -9,9 +9,11 @@ function Tikets() {
   const myContract = useRef(null);
   const [tikets, setTikets] = useState([]);
   const [realBalance, setRealBalance] = useState(0);
-  const [storedBalance, setStoredlBalance] = useState(0);
+  const [balanceWei, setBalanceWei] = useState(0);
   const [userBalance, setUserBalance] = useState(0);
-  const [userAddress, setUserAddress] = useState(null)
+
+  const [ticketId, setTicketId] = useState("");
+  const [recipient, setRecipient] = useState("");
 
   useEffect(() => {
     initContracts();
@@ -23,6 +25,7 @@ function Tikets() {
     if (tiketsFromBlockchain != null) {
       setTikets(tiketsFromBlockchain)
       seeBalance()
+      seeUserBalance()
     }
   }
 
@@ -33,17 +36,14 @@ function Tikets() {
       let provider = await detectEthereumProvider();
       if (provider) {
         await provider.request({ method: 'eth_requestAccounts' });
-       
+
         const networkId = await provider.request({ method: 'net_version' })
 
         provider = new ethers.providers.Web3Provider(provider);
         const signer = provider.getSigner();
 
-        setUserAddress(signer.address)
-        console.log(signer)
-
         myContract.current = new Contract(
-          '0x7A446cE2F2253Ab67A5E5C262db99E4D409a262D',
+          '0x938dBD937334359ca5140EaBa5443666b679E761',
           myContractManifest.abi,
           signer
         );
@@ -60,7 +60,7 @@ function Tikets() {
       gasPrice: 20000000000,
     });
 
-    await tx.wait();
+    await tx.wait()
 
     const tiketsUpdated = await myContract.current.getTikets();
     setTikets(tiketsUpdated);
@@ -83,25 +83,102 @@ function Tikets() {
 
   let seeBalance = async () => {
     const balances = await myContract.current?.getContractBalance();
+
     setRealBalance(balances[0])
-    setStoredlBalance(balances[1])
+    setBalanceWei(balances[1])
   }
 
+  // Ampliacion 3
+  let seeUserBalance = async () => {
+
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    const userAddress = await signer.getAddress();
+
+    const balance = await provider.getBalance(userAddress);
+    const balanceInEther = ethers.utils.formatEther(balance);
+    setUserBalance(balanceInEther);
+  }
+
+  let donateTiket = async (e, i) => {
+    //evita que avance a la página del formulario
+    e.preventDefault();
+
+    const valueForm = e.target.elements[0].value;
+    if (valueForm < 0.01) {
+      alert("El valor debe ser mayor a 0.01 BNB");
+      return;
+    }
+
+    const tx = await myContract.current.buyTiket(i, {
+      value: ethers.utils.parseEther(valueForm),
+      gasLimit: 6721975,
+      gasPrice: 20000000000,
+    });
+
+    await tx.wait()
+
+    const tiketsUpdated = await myContract.current.getTikets();
+    setTikets(tiketsUpdated);
+    seeBalance()
+  }
+
+  let bookTiket = async (i) => {
+    console.log(i)
+    const tx = await myContract.current.bookTiket(i);
+    console.log(tx)
+  }
+
+  let transferTiket = async (e) => {
+    const tx = await myContract.current.transferTiket(ticketId, recipient);
+
+    await tx.wait();
+  }
 
   return (
     <div>
       <h1>Tikets store</h1>
       <button onClick={() => withdrawBalance()}>Withdraw Balance: {ethers.utils.formatEther(realBalance)} BNB</button>
+      <p>Balance Wei: {ethers.utils.formatEther(balanceWei)}</p>
       <form className="form-inline" onSubmit={(e) => submitMyForm(e)}>
         <input type="text" />
         <button type="submit" > Donate </button>
       </form>
-      <p>User waller balance: </p>
+      <p>User wallet balance: {userBalance} BNB</p>
+      <form onSubmit={(e) => transferTiket(e)}>
+        <div>
+          <label htmlFor="ticketId">Ticket ID:</label>
+          <input
+            type="number"
+            id="ticketId"
+            value={ticketId}
+            onChange={(e) => setTicketId(e.target.value)}
+            required
+            min="0"
+          />
+        </div>
+        <div>
+          <label htmlFor="recipient">Recipient Address:</label>
+          <input
+            type="text"
+            id="recipient"
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
+            required
+          />
+        </div>
+        <button type="submit">Transfer Ticket</button>
+      </form>
       <ul>
         {tikets.map((address, i) =>
           <li>Tiket {i} comprado por {address}
             {address == ethers.constants.AddressZero &&
               <a href="#" onClick={() => clickBuyTiket(i)}> buy</a>}
+            <form className="form-inline" onSubmit={(e) => donateTiket(e, i)}>
+              <input type="number" step="any" placeholder="0.00" />
+              <button type="submit" > Donate </button>
+            </form>
+            <button onClick={() => bookTiket(i)}>Book</button>
           </li>
         )}
       </ul>

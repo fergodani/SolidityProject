@@ -8,6 +8,8 @@ import bankManifest from "../../contracts/Bank.json";
 
 function Bank() {
   const bank = useRef(null);
+  const [userBalance, setUserBalance] = useState(0);
+  const [userInterest, setUserInterest] = useState(0);
 
   useEffect(() => {
     initContracts();
@@ -15,6 +17,7 @@ function Bank() {
 
   let initContracts = async () => {
     await getBlockchain();
+    seeUserBalance()
   }
 
   let getBlockchain = async () => {
@@ -27,7 +30,7 @@ function Bank() {
       const signer = provider.getSigner();
 
       bank.current = new Contract(
-        "0xF70C1030e2BbDD07bBCE5B1243CBe7fDc867104f",
+        "0x0866feEDdDCc36CdaE715cbF14077210c4B90B94",
         bankManifest.abi,
         signer
       );
@@ -39,7 +42,7 @@ function Bank() {
   let onSubmitDeposit = async (e) => {
     e.preventDefault();
     const BNBamount = parseFloat(e.target.elements[0].value);
-
+    console.log(BNBamount)
     // Wei to BNB se pasa con ethers.utils recibe un String!!!
     const tx = await bank.current.deposit({
       value: ethers.utils.parseEther(String(BNBamount)),
@@ -54,11 +57,20 @@ function Bank() {
     await await bank.current.withdraw();
   }
 
+  let seeUserBalance = async () => {
+    const balance = await bank.current?.getBalanceBNB();
+    const interes = await bank.current?.getInteres();
+    setUserBalance(ethers.utils.formatEther(balance))
+    setUserInterest(ethers.utils.formatEther(interes))
+  }
+
 
 
   return (
     <div>
       <h1>Bank</h1>
+      <p>Your BNB deposited: {userBalance} BNB</p>
+      <p>Your generated interest: {userInterest} BMIW</p>
       <form onSubmit={(e) => onSubmitDeposit(e)} >
         <input type="number" step="0.01" />
         <button type="submit">Deposit</button>
